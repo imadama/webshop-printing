@@ -6,7 +6,7 @@ FROM node:20-alpine AS base
 ENV PNPM_HOME=/usr/local/share/pnpm
 ENV PATH=$PNPM_HOME:$PATH
 RUN corepack enable && corepack prepare pnpm@10.16.1 --activate
-RUN apk add --no-cache python3 make g++ libc6-compat
+RUN apk add --no-cache python3 make g++ libc6-compat curl
 
 
 FROM base AS deps
@@ -32,15 +32,15 @@ FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Production deps only, hoisted at the build output dir
+# medusa build emits a self-contained server bundle in .medusa/server which
+# has its own package.json with the `start` and `db:migrate` scripts wired up.
 COPY --from=build /app/apps/backend/.medusa/server ./
-RUN pnpm install --prod --frozen-lockfile --ignore-scripts || pnpm install --prod --ignore-scripts
+RUN pnpm install --prod --ignore-scripts
 
-# Healthcheck: the backend exposes /health
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:9000/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
+  CMD curl -fsS http://127.0.0.1:9000/health || exit 1
 
 EXPOSE 9000
 
-# Migrations run on each container start; safe because Medusa skips already-run scripts.
-CMD ["sh", "-c", "node ./node_modules/@medusajs/medusa/dist/commands/db/migrate.js && node ./index.js"]
+# Run pending migrations on each container start (idempotent), then boot the server.
+CMD ["sh", "-c", "pnpm exec medusa db:migrate && pnpm exec medusa start"]

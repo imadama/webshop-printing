@@ -1,0 +1,9 @@
+node_modules
+.medusa
+dist
+.env
+.env.*
+!.env.template
+*.log
+.DS_Store
+.turbo

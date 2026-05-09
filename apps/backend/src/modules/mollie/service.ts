@@ -35,6 +35,7 @@ import createMollieClient, {
 type Options = {
   apiKey: string
   webhookUrl?: string
+  redirectUrl?: string
 }
 
 type InjectedDependencies = {
@@ -58,7 +59,6 @@ class MollieProviderService extends AbstractPaymentProvider<Options> {
   }
 
   constructor(container: InjectedDependencies, options: Options) {
-    // @ts-expect-error - super signature is broader than the type
     super(container, options)
     this.logger_ = container.logger
     this.options_ = options
@@ -95,21 +95,23 @@ class MollieProviderService extends AbstractPaymentProvider<Options> {
   async initiatePayment(
     input: InitiatePaymentInput
   ): Promise<InitiatePaymentOutput> {
-    const { amount, currency_code, context } = input
+    const { amount, currency_code, data, context } = input
     const numericAmount =
       typeof amount === "object" ? Number((amount as BigNumber).numeric) : Number(amount)
 
+    const sessionId = (data as Record<string, unknown> | undefined)?.session_id as string | undefined
+
     const payment = await this.client_.payments.create({
       amount: this.formatAmount(numericAmount, currency_code),
-      description: `Order ${context?.idempotency_key ?? "checkout"}`,
+      description: `Popify order ${sessionId ?? context?.idempotency_key ?? "checkout"}`,
       redirectUrl:
-        (context?.return_url as string) ||
+        this.options_.redirectUrl ||
+        process.env.MOLLIE_REDIRECT_URL ||
         process.env.STORE_CORS?.split(",")[0] ||
-        "https://example.com",
+        "https://popify.nl",
       webhookUrl: this.options_.webhookUrl,
       metadata: {
-        session_id: context?.session_id,
-        cart_id: context?.cart_id,
+        session_id: sessionId ?? null,
       },
     })
 
@@ -119,6 +121,7 @@ class MollieProviderService extends AbstractPaymentProvider<Options> {
         id: payment.id,
         status: payment.status,
         checkout_url: payment._links?.checkout?.href,
+        session_id: sessionId,
       },
     }
   }

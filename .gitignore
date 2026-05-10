@@ -65,3 +65,4 @@ Thumbs.db
 
 # TypeScript incremental build info
 **/tsconfig.tsbuildinfo
+*.snapshot-medusa.json

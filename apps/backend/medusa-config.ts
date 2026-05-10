@@ -87,5 +87,8 @@ module.exports = defineConfig({
         ],
       },
     },
+    printing: {
+      resolve: "./src/modules/printing",
+    },
   },
 })

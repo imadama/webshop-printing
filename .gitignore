@@ -60,3 +60,8 @@ secrets/
 ehthumbs.db
 Thumbs.db
 **/.DS_Store
+# Claude Code local
+.claude/
+
+# TypeScript incremental build info
+**/tsconfig.tsbuildinfo

@@ -16,6 +16,9 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     },
   },
+  admin: {
+    maxUploadFileSize: 5 * 1024 * 1024,
+  },
   modules: {
     [Modules.CACHE]: {
       resolve: "@medusajs/cache-redis",
